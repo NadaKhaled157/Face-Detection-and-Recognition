@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/data/faces" />
+      <excludeFolder url="file://$MODULE_DIR$/data/non_faces" />
+      <excludeFolder url="file://$MODULE_DIR$/data/test" />
+    </content>
+    <orderEntry type="jdk" jdkName="Python 3.12 (venv) (10)" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
