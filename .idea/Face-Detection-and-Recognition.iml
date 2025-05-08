@@ -5,6 +5,8 @@
       <excludeFolder url="file://$MODULE_DIR$/data/faces" />
       <excludeFolder url="file://$MODULE_DIR$/data/non_faces" />
       <excludeFolder url="file://$MODULE_DIR$/data/test" />
+      <excludeFolder url="file://$MODULE_DIR$/del/dataset" />
+      <excludeFolder url="file://$MODULE_DIR$/del/output" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.12 (venv) (10)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
