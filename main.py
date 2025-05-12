@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 import cv2
 import matplotlib.pyplot as plt
 
+
 class FaceDetectionApp(QtWidgets.QMainWindow):
     def __init__(self):
         super(FaceDetectionApp, self).__init__()
@@ -128,9 +129,9 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
             # Update status bar
             self.statusBar().showMessage(f"Detection completed: {result_text}")
 
-            # If face detected, approximate its location and display cropped face
+            # If face detected, display the original image with face highlighted
             if self.is_face:
-                self.approximate_face_location()
+                self.display_face_result()
             else:
                 # Clear the widget if no face is detected
                 if hasattr(self.Widget_Org_Image, 'image_label'):
@@ -140,35 +141,41 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
             QMessageBox.critical(self, "Error", f"Detection failed: {str(e)}")
             print(f"Error in detection: {e}")
 
-    def approximate_face_location(self):
-        """Approximate face location and display cropped region on Widget_Org_Image"""
+    def display_face_result(self):
+        """Display the original image with the detected face highlighted"""
         try:
-            # Load original image with OpenCV for cropping
+            # Load original image with OpenCV
             original_image = cv2.imread(self.current_image_path)
             if original_image is None:
                 raise ValueError("Could not load original image with OpenCV")
 
-            height, width = original_image.shape[:2]
+            # Get original dimensions
+            orig_height, orig_width = original_image.shape[:2]
 
-            # Assume face is centered and occupies ~50% of the image area
-            face_size_ratio = 0.5
-            face_width = int(width * face_size_ratio)
-            face_height = int(height * face_size_ratio)
-            x = (width - face_width) // 2
-            y = (height - face_height) // 2
+            # Calculate scaling factors
+            x_scale = orig_width / self.img_size
+            y_scale = orig_height / self.img_size
 
-            self.face_coords = (x, y, face_width, face_height)
-            print(f"Approximated face coordinates: x={x}, y={y}, w={face_width}, h={face_height}")
+            # Calculate face coordinates (using center region as in your PCA approach)
+            center_x = orig_width // 2
+            center_y = orig_height // 2
+            face_size = min(orig_width, orig_height) // 2  # Adjust this based on your needs
 
-            # Crop the face region
-            cropped_face = original_image[y:y+face_height, x:x+face_width]
+            # Define face bounding box
+            x_min = max(0, center_x - face_size // 2)
+            y_min = max(0, center_y - face_size // 2)
+            x_max = min(orig_width, center_x + face_size // 2)
+            y_max = min(orig_height, center_y + face_size // 2)
 
-            # Display cropped face on Widget_Org_Image
-            self.display_image_on_widget(cropped_face)
+            # Draw rectangle around the face
+            cv2.rectangle(original_image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+            # Display the result
+            self.display_image_on_widget(original_image)
 
         except Exception as e:
-            print(f"Error approximating or displaying face: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to process face: {str(e)}")
+            print(f"Error displaying face result: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to display face result: {str(e)}")
 
     def display_image_on_widget(self, image):
         """Display a numpy array image on self.Widget_Org_Image"""
@@ -232,7 +239,6 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
         self.is_face = False
 
         self.statusBar().showMessage("Display cleared")
-
 
 
 if __name__ == "__main__":
