@@ -7,8 +7,8 @@ from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 import cv2
 import matplotlib.pyplot as plt
-
-
+from PyQt5.QtWidgets import QMainWindow, QApplication, QButtonGroup
+from PCA import * # Assuming PCA is defined in a separate file named PCA.py
 class FaceDetectionApp(QtWidgets.QMainWindow):
     def __init__(self):
         super(FaceDetectionApp, self).__init__()
@@ -35,6 +35,20 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
         # Set window title
         self.setWindowTitle("Face Detection System")
 
+    #    /////////////////////////////////////////////////////////
+            # Create a button group and add the radio buttons
+        button_group = QButtonGroup(self)
+        button_group.addButton(self.RadioButton_Recog)
+        button_group.addButton(self.RadioButton_detect)
+        button_group.addButton(self.RadioButton_C_matrix)
+        button_group.addButton(self.RadioButton_Roc)
+        
+        # Connect the buttons to a function to handle their state change
+        button_group.buttonClicked.connect(self.on_radio_button_clicked)
+
+
+
+
     def setup_connections(self):
         """Set up UI element connections"""
         # Connect the double-click event on Widget_Org_Image to load image function
@@ -45,10 +59,16 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
 
         # Connect the radio button for detection
         try:
-            self.RadioButton_detect.toggled.connect(self.on_detect_radio_toggled)
+            self.RadioButton_detect.toggled.connect(self.on_radio_button_clicked)
         except AttributeError as e:
             print(f"Error connecting RadioButton_detect: {e}")
             print("Please check that your UI file has elements with these names: Widget_Org_Image, RadioButton_detect")
+
+
+
+
+
+        
 
     def on_image_widget_double_click(self, event):
         """Handle double-click on the image widget to load an image"""
@@ -91,7 +111,7 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
                     raise ValueError("Could not load image with OpenCV")
 
                 # Display the image in Widget_Org_Image
-                self.display_image_on_widget(cv_image)
+                self.display_image_on_widget(cv_image,self.Widget_Org_Image)
 
                 # Prepare image for processing
                 resized_img = self.current_image.resize((self.img_size, self.img_size))
@@ -100,8 +120,14 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
                 # Status update
                 self.statusBar().showMessage(f"Loaded image: {os.path.basename(file_name)}")
 
+#                # Call the radio button click event to trigger detection       
+
+                self.on_radio_button_clicked()
+
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to load image: {str(e)}")
+
+       
 
     def detect_and_locate_face(self):
         """Detect face using PCA and display cropped face if detected"""
@@ -171,20 +197,19 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
             cv2.rectangle(original_image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
             # Display the result
-            self.display_image_on_widget(original_image)
+            self.display_image_on_widget(original_image,self.Widget_Output)
 
         except Exception as e:
             print(f"Error displaying face result: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to display face result: {str(e)}")
 
-    def display_image_on_widget(self, image):
-        """Display a numpy array image on self.Widget_Org_Image"""
+    def display_image_on_widget(self, image, widget):
+        """Display a numpy array image on the given widget"""
         if image is None or image.size == 0:
             print("Empty or invalid image")
             return
 
         try:
-            # Determine if image is grayscale or color
             if len(image.shape) == 2:  # Grayscale
                 height, width = image.shape
                 bytes_per_line = width
@@ -192,31 +217,27 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
             elif len(image.shape) == 3 and image.shape[2] == 3:  # BGR
                 height, width = image.shape[:2]
                 bytes_per_line = 3 * width
-                # Convert BGR to RGB for QImage
                 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 q_img = QImage(image_rgb.data, width, height, bytes_per_line, QImage.Format_RGB888)
             else:
                 raise ValueError("Unsupported image format!")
 
-            # Convert to QPixmap and scale
             pixmap = QPixmap.fromImage(q_img)
-            widget_size = self.Widget_Org_Image.size()
-            scaled_pixmap = pixmap.scaled(
-                widget_size,
-                QtCore.Qt.KeepAspectRatio,
-                QtCore.Qt.SmoothTransformation
-            )
+            widget_size = widget.size()
+            scaled_pixmap = pixmap.scaled(widget_size, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
 
-            # Ensure widget has a label to display the image
-            if not hasattr(self.Widget_Org_Image, 'image_label'):
-                self.Widget_Org_Image.image_label = QtWidgets.QLabel(self.Widget_Org_Image)
-                self.Widget_Org_Image.image_label.setAlignment(QtCore.Qt.AlignCenter)
-                layout = QtWidgets.QVBoxLayout(self.Widget_Org_Image)
+            # Create image_label once
+            if not hasattr(widget, 'image_label'):
+                widget.image_label = QtWidgets.QLabel(widget)
+                widget.image_label.setAlignment(QtCore.Qt.AlignCenter)
+                layout = QtWidgets.QVBoxLayout(widget)
                 layout.setContentsMargins(0, 0, 0, 0)
-                layout.addWidget(self.Widget_Org_Image.image_label)
+                layout.addWidget(widget.image_label)
+            else:
+                # Remove previous pixmap if needed (not required strictly, but ensures clean updates)
+                widget.image_label.clear()
 
-            # Set the scaled pixmap to the label
-            self.Widget_Org_Image.image_label.setPixmap(scaled_pixmap)
+            widget.image_label.setPixmap(scaled_pixmap)
 
         except Exception as e:
             print(f"Error displaying image: {str(e)}")
@@ -240,6 +261,30 @@ class FaceDetectionApp(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage("Display cleared")
 
+# /////////////////////////////////////////////////////////////////////////////////////////////
+
+    def on_radio_button_clicked(self):
+       
+        if self.RadioButton_Recog.isChecked():
+            #  self.current_image_path
+            recognizer = EigenFaceRecognizer()
+            recognizer.load_models()  # load trained models
+
+            
+            stacked_img = recognizer.get_neighbors_images( self.current_image_path)
+            self.display_image_on_widget(stacked_img, self.Widget_Output)
+            print("Recognition mode selected")
+        
+        elif self.RadioButton_detect.isChecked():
+            print("Recognition mode selected")
+            self.detect_and_locate_face()
+        
+        elif self.RadioButton_C_matrix.isChecked():
+           pass
+        
+        
+        elif self.RadioButton_Roc.isChecked():
+           pass
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
